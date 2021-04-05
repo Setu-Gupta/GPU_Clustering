@@ -7,6 +7,13 @@
 #include <cstdlib>
 #include <cstring>
 
+/*
+I/O format:
+A list of the following entries
+x <space> y <space> cluster_number
+x and y are floating point values
+*/
+
 void print_usage()
 {
 	std::cout << "Usage: test <path to dataset> <kmeans | dbscan | pca> [options]" << std::endl;
