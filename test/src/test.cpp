@@ -18,6 +18,8 @@ void print_usage()
 {
 	std::cout << "Usage: test <path to dataset> <kmeans | dbscan | pca> [options]" << std::endl;
 	std::cout << "Options for kmeans: <k> <number of iterations>" << std::endl;
+	std::cout << "Options for dbscan: <minPts> <R>" <<std::endl;
+
 }
 
 int main(int argc, char **argv)
@@ -28,6 +30,7 @@ int main(int argc, char **argv)
 		print_usage();
 		return -1;
 	}
+
 
 	std::string dataset_path(argv[1]);
 	std::string test_name(argv[2]);
@@ -44,6 +47,14 @@ int main(int argc, char **argv)
 		print_usage();
 		return -1;
 	}
+
+	if(test_name == "dbscan" && argc < 5)
+	{
+		print_usage();
+		return -1;
+	}
+
+
 	
 	// Open files to read and write from
 	std::ifstream dataset(dataset_path);
@@ -88,7 +99,19 @@ int main(int argc, char **argv)
 	}
 	else if(test_name == "dbscan")
 	{
-		std::cout << "TODO" << std::endl;
+	
+		int minPts =atoi(argv[3]);
+		char *endptr;
+		float R = strtof(argv[4], &endptr);
+		float msecs_cpu=dbscanCPU(x, y,map,n, minPts, R);
+		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
+		
+
+		for(unsigned int i = 0; i < n; i++){
+			mapCPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
+			//std::cout<< x[i] << " " << y[i] << " " << map[i] << std::endl;
+			
+		}
 	}
 	else
 	{

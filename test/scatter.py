@@ -14,18 +14,19 @@ import sys
 data = {}
 
 for line in open(sys.argv[1], 'r'):
-	x, y, n = line.split()
-	x = float(x)
-	y = float(y)
-	
-	if n not in data:	# Create an entry if none exists
-		data[n] = [[], []]
+    x, y, n = line.split()
+    x = float(x)
+    y = float(y)
 
-	data[n][0].append(x)
-	data[n][1].append(y)
+    if n not in data:  # Create an entry if none exists
+        data[n] = [[], []]
+
+    data[n][0].append(x)
+    data[n][1].append(y)
 
 for n in data:
-	plt.scatter(data[n][0], data[n][1], label="Cluster " + str(n))
+    plt.scatter(data[n][0], data[n][1], label="Cluster " + str(n))
 
 plt.legend(loc="upper right")
 plt.show()
+
