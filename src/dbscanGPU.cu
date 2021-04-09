@@ -7,46 +7,52 @@
 
 #include "GPUCluster.h"
 __global__ void  kernel_getV(float* x,float* y,int n,int* V,int* core,int minPts,float R){
+   
     int tx=threadIdx.x+blockDim.x*blockIdx.x;
     // printf("%f\n",R);
+   if(tx<n){
     V[tx]=0;
     core[tx]=0;
     float px=x[tx];
     float py=y[tx];
     int count=0;
-    for(int i=0;i<tx;i++){
+    for(int i=0;i<n;i++){
         float dist=sqrt(pow(px-x[i],2)+pow(py-y[i],2));
         // printf("%f , %f",x[i],y[i]);
-        // printf("%f\n",dist);
-        if(dist<=R && dist!=0){
-            printf("%d\n",tx);
-            V[tx]++;
+        // printf("%f,%f,%f,%f,%f\n",px,py,x[i],y[i],dist);
+        if(dist<=R && dist>0){
+            // printf("%d\n",tx);
+            V[tx]=count+1;
             count++;
         }
     }
     if(count>minPts){
         core[tx]=1;
     }
+    }
 }
 
 __global__ void kernel_getEdges(float* x,float* y,int n,int* V,int* indices,int* edges,float R) {
     int tx=threadIdx.x+blockDim.x*blockIdx.x;
-    int count =0;
-    float px=x[tx];
-    float py=y[tx];
-    for(int i=0;i<n;i++){
-        float dist=sqrt(pow(px-x[i],2)+pow(py-y[i],2));
-        if(dist<=R && dist>0){
-            edges[indices[tx]+count]=i;
-            count++;
-        }
+    if(tx<n){
+        // printf("%d\n",tx);
+        int count =0;
+        float px=x[tx];
+        float py=y[tx];
+        for(int i=0;i<n;i++){
+            float dist=sqrt(pow(px-x[i],2)+pow(py-y[i],2));
+            if(dist<=R && dist>0){
+                edges[indices[tx]+count]=i;
+                count++;
+            }
 
+        }
     }
     
 }
 
 int main(){
-    float x[10]={1,2,3,4,5,6,7,8,10,20};
+    float x[10]={1,2,3,4,5,6,7,8,10,11};
     float y[10]={0,0,0,0,0,0,0,0,0,0};
     float R=1;
     int minPts=2;
@@ -72,39 +78,42 @@ int main(){
     cudaMemcpy(V, d_V, sizeof(int)*n, cudaMemcpyDeviceToHost);
     cudaMemcpy(core, d_core, sizeof(int)*n, cudaMemcpyDeviceToHost);
     
-    for(int i=0;i<n;i++){
-        std::cout<<V[i]<<std::endl;
-    }
-    // int* indices=(int* )malloc(sizeof(int)*n);
-    // thrust::exclusive_scan(thrust::host, V, V + n, indices, 0);
+    // for(int i=0;i<n;i++)std::cout<<V[i]<<std::endl;
+    
+    int* indices=(int* )malloc(sizeof(int)*n);
+    thrust::exclusive_scan(thrust::host, V, V + n, indices, 0);
 
-    // int numEdges=V[n-1]+indices[n-1];
+    int numEdges=V[n-1]+indices[n-1];
     // std::cout<<numEdges<<std::endl;
-    // int* edges= (int* ) malloc(sizeof(int)*(numEdges));
-    // int* d_indices;
-    // int* d_edges;
-    // cudaMalloc((void**)&d_indices, sizeof(int)*n);
-    // cudaMalloc((void**)&d_edges, sizeof(int)*n);
+    // std::cout<<numEdges<<std::endl;
+    // for(int i=0;i<n;i++)std::cout<<indices[i]<<" "<<V[i]<<std::endl;
+    int* edges= (int* ) malloc(sizeof(int)*(numEdges));
+    int* d_indices;
+    int* d_edges;
+    cudaMalloc((void**)&d_indices, sizeof(int)*n);
+    cudaMalloc((void**)&d_edges, sizeof(int)*numEdges);
     
     
-    // cudaMemcpy(d_indices, indices , sizeof(int)*n, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_indices, indices , sizeof(int)*n, cudaMemcpyHostToDevice);
 
-    // kernel_getEdges<<<max(1,n/1024),max(n,1024)>>>(d_x,d_y,n,d_V,d_indices,d_edges,R);
-    // cudaDeviceSynchronize();
-    // cudaMemcpy(edges, d_edges, sizeof(int)*n, cudaMemcpyDeviceToHost);
+    kernel_getEdges<<<max(1,n/1024),max(n,1024)>>>(d_x,d_y,n,d_V,d_indices,d_edges,R);
+    cudaDeviceSynchronize();
+    cudaMemcpy(edges, d_edges, sizeof(int)*numEdges, cudaMemcpyDeviceToHost);
     
+for(int i=0;i<numEdges;i++){
+        std::cout<<edges[i]<<std::endl;
+    }
 
-
-    // cudaFree(d_edges);
-    // cudaFree(d_indices);
-    // cudaFree(d_V);
-    // cudaFree(d_x);
-    // cudaFree(d_y);
-    // cudaFree(d_core);
-    // free(core);
-    // free(edges);
-    // free(indices);
-    // free(V);
+    cudaFree(d_edges);
+    cudaFree(d_indices);
+    cudaFree(d_V);
+    cudaFree(d_x);
+    cudaFree(d_y);
+    cudaFree(d_core);
+    free(core);
+    free(edges);
+    free(indices);
+    free(V);
 
     
 
