@@ -9,11 +9,12 @@ Args:
 	n:	number of datapoints
 	k:	number of clusters to create
 	num_iters:	number of iteration to run kmeans for
+Returns: Time spent in computation in milliseconds
 */
 float kmeansCPU(float *x, float *y, unsigned int *map, unsigned int n, unsigned int k, unsigned int num_iters)
 {
 	float clusters_x[k];	// Holds the current x coordinate of k clusters
-	float clusters_y[k];	// Holds the current x coordinate of k clusters
+	float clusters_y[k];	// Holds the current y coordinate of k clusters
 	
 	struct timespec start_cpu, end_cpu;
 	float msecs_cpu;
@@ -44,7 +45,7 @@ float kmeansCPU(float *x, float *y, unsigned int *map, unsigned int n, unsigned 
 		for(unsigned int i = 0; i < n; i++)
 		{
 			float min_dist = FLT_MAX;
-			unsigned int min_cluster = -1;
+			int min_cluster = -1;
 			for(unsigned int j = 0; j < k; j++)
 			{
 				// Compute the Euclidean distance from each cluster

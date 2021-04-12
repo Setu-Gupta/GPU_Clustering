@@ -93,9 +93,19 @@ int main(int argc, char **argv)
 
 		float msecs_cpu = kmeansCPU(x, y, map, n, k, num_iters);
 		std::cout << "CPU took " << msecs_cpu << "ms" << std::endl;
-
 		for(unsigned int i = 0; i < n; i++)
 			mapCPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
+		
+		memset(map, 0, n * sizeof(unsigned int));
+
+		float msecs_gpu = kmeansGPU(x, y, map, n, k, num_iters);
+		std::cout << "GPU took " << msecs_gpu << "ms" << std::endl;
+		for(unsigned int i = 0; i < n; i++)
+			mapGPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
+
+		float speedup = msecs_cpu / msecs_gpu;
+		std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
+
 	}
 	else if(test_name == "dbscan")
 	{
