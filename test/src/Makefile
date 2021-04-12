@@ -1,6 +1,6 @@
-SRC=$(wildcard ./*.cpp) $(wildcard ../../src/*.cpp)
+SRC=$(wildcard ./*.cpp) $(wildcard ../../src/*.cpp) $(wildcard ./*.cu) $(wildcard ../../src/*.cu)
 
-CC=g++
+CC=nvcc
 
 test: $(SRC)
 	$(CC) -o test $(SRC) -g

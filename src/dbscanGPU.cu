@@ -51,7 +51,7 @@ __global__ void kernel_getEdges(float* x,float* y,int n,int* V,int* indices,int*
     
 }
 
-int main(){
+int test_main(){
     float x[10]={1,2,3,4,5,6,7,8,10,11};
     float y[10]={0,0,0,0,0,0,0,0,0,0};
     float R=1;
