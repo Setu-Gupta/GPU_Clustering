@@ -43,4 +43,26 @@ Args:
 	R:	minimum euclidean distance between two points for them to be neighbours
 */
 float dbscanCPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,float R);
+
+
+/*
+Performs DBSCAN clustering on GPU
+Args:
+	x:	x coordinates of datapoints (n length float array)
+	y:	y coordinates of datapoints (n length float array)
+	map:	array to store cluster and datapoint mappings (n length unsigned int array) . Value of 255 means Noise point.
+	n:	number of datapoints
+	minPts:	minimum number of neighbours for a point to be labelled as core
+	R:	minimum euclidean distance between two points for them to be neighbours
+*/
+float dbscanGPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,float R);
+
+
+
+
+
+
+
+
+
 #endif

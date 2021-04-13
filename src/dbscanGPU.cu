@@ -18,15 +18,12 @@ __global__ void  kernel_getV(float* x,float* y,int n,int* V,int* core,int minPts
     int count=0;
     for(int i=0;i<n;i++){
         float dist=sqrt(pow(px-x[i],2)+pow(py-y[i],2));
-        // printf("%f , %f",x[i],y[i]);
-        // printf("%f,%f,%f,%f,%f\n",px,py,x[i],y[i],dist);
         if(dist<=R && dist>0){
-            // printf("%d\n",tx);
             V[tx]=count+1;
             count++;
         }
     }
-    if(count>minPts){
+    if(count>=minPts){
         core[tx]=1;
     }
     }
@@ -35,7 +32,6 @@ __global__ void  kernel_getV(float* x,float* y,int n,int* V,int* core,int minPts
 __global__ void kernel_getEdges(float* x,float* y,int n,int* V,int* indices,int* edges,float R) {
     int tx=threadIdx.x+blockDim.x*blockIdx.x;
     if(tx<n){
-        // printf("%d\n",tx);
         int count =0;
         float px=x[tx];
         float py=y[tx];
@@ -50,13 +46,84 @@ __global__ void kernel_getEdges(float* x,float* y,int n,int* V,int* indices,int*
     }
     
 }
+__global__ void kernel_init(int* Fa,int size){
+    int tx=threadIdx.x+blockDim.x*blockIdx.x;
+    if(tx<size){
+        Fa[tx]=0;
+    }
+}
 
-int test_main(){
-    float x[10]={1,2,3,4,5,6,7,8,10,11};
-    float y[10]={0,0,0,0,0,0,0,0,0,0};
-    float R=1;
-    int minPts=2;
-    int n=10;
+
+__global__ void kernel_bfs_child(int* V,int* indices,int* edges,int* Fa,int* Xa,int* workToDo,int n){
+    int tx=threadIdx.x+blockDim.x*blockIdx.x;
+
+    if(tx<n){
+    if(Fa[tx]==1){
+
+        Fa[tx]=0;Xa[tx]=1;
+        for(int i=0;i<V[tx];i++){
+            int neigh=edges[indices[tx]+i];
+            if(Xa[neigh]==0){
+
+                Fa[neigh]=1;
+                *workToDo=1;
+            }
+
+
+            }
+        }
+    }
+}
+__global__ void kernel_updateVisited(int* visited,int* Xa,unsigned int* map,int cluster,int n){
+    int tx=threadIdx.x + blockDim.x*blockIdx.x;
+    if(tx<n){
+        map[tx]=255;
+        if(Xa[tx]==1){
+            visited[tx]=1;
+            map[tx]=cluster;
+        }
+    }
+}
+__global__ void kernel_parent_bfs(int n,int* V,int* indices,int* edges,int* core,int*Fa,int* Xa, unsigned int* map,int* visited,int* workToDo){
+    
+    kernel_init<<<max(1,n/1024),min(n,1024)>>>(visited,n);
+    cudaDeviceSynchronize();
+
+    int cluster=1;
+    for(int v=0;v<n;v++){
+
+        if(core[v]==1 && visited[v]==0){
+
+            visited[v]=1;
+            kernel_init<<<max(1,n/1024),min(n,1024)>>>(Fa,n);
+            kernel_init<<<max(1,n/1024),min(n,1024)>>>(Xa,n);
+            cudaDeviceSynchronize();
+            Fa[v]=1;
+
+            *workToDo=1;
+            while(*workToDo==1){
+                *workToDo=0;
+                kernel_bfs_child<<<max(1,n/1024),min(n,1024)>>>(V,indices,edges,Fa,Xa,workToDo,n);
+                cudaDeviceSynchronize();
+
+            }
+            kernel_updateVisited<<<max(1,n/1024),min(n,1024)>>>(visited,Xa,map,cluster,n);
+            cudaDeviceSynchronize();
+            cluster++;
+        }
+    }
+
+}
+
+float dbscanGPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,float R){
+    // float x[12]={1,2,3,4,5,6,7,8,20,21,22,89};
+    // float y[12]={0,0,0,0,0,0,0,0,0,0,0,0};
+    // float R=1;
+    // int minPts=2;
+    // int n=12;
+    struct timespec start_gpu, end_gpu;
+	float msecs_gpu;
+	clock_gettime(CLOCK_MONOTONIC, &start_gpu);
     int* d_V;
     int* d_core;
     float* d_x;
@@ -70,7 +137,7 @@ int test_main(){
     cudaMemcpy(d_x, x, sizeof(float)*n, cudaMemcpyHostToDevice);
     cudaMemcpy(d_y, y, sizeof(float)*n, cudaMemcpyHostToDevice);
     
-    kernel_getV<<<max(1,n/1024),max(n,1024)>>>(d_x,d_y,n,d_V,d_core,minPts,R);
+    kernel_getV<<<max(1,n/1024),min(n,1024)>>>(d_x,d_y,n,d_V,d_core,minPts,R);
     cudaDeviceSynchronize();
     int* V= (int* )malloc(sizeof(int)*n);
     int* core= (int* )malloc(sizeof(int)*n);
@@ -78,15 +145,13 @@ int test_main(){
     cudaMemcpy(V, d_V, sizeof(int)*n, cudaMemcpyDeviceToHost);
     cudaMemcpy(core, d_core, sizeof(int)*n, cudaMemcpyDeviceToHost);
     
-    // for(int i=0;i<n;i++)std::cout<<V[i]<<std::endl;
+
     
     int* indices=(int* )malloc(sizeof(int)*n);
     thrust::exclusive_scan(thrust::host, V, V + n, indices, 0);
 
     int numEdges=V[n-1]+indices[n-1];
-    // std::cout<<numEdges<<std::endl;
-    // std::cout<<numEdges<<std::endl;
-    // for(int i=0;i<n;i++)std::cout<<indices[i]<<" "<<V[i]<<std::endl;
+   
     int* edges= (int* ) malloc(sizeof(int)*(numEdges));
     int* d_indices;
     int* d_edges;
@@ -96,13 +161,29 @@ int test_main(){
     
     cudaMemcpy(d_indices, indices , sizeof(int)*n, cudaMemcpyHostToDevice);
 
-    kernel_getEdges<<<max(1,n/1024),max(n,1024)>>>(d_x,d_y,n,d_V,d_indices,d_edges,R);
+    kernel_getEdges<<<max(1,n/1024),min(n,1024)>>>(d_x,d_y,n,d_V,d_indices,d_edges,R);
     cudaDeviceSynchronize();
     cudaMemcpy(edges, d_edges, sizeof(int)*numEdges, cudaMemcpyDeviceToHost);
     
-for(int i=0;i<numEdges;i++){
-        std::cout<<edges[i]<<std::endl;
-    }
+
+    unsigned int* d_map;
+    int* Fa;int* Xa;
+    cudaMalloc((void**)&d_map, sizeof(unsigned int)*n);
+    cudaMalloc((void**)&Fa, sizeof(int)*n);
+    cudaMalloc((void**)&Xa, sizeof(int)*n);
+
+    int* visited;
+    cudaMalloc((void**)&visited, sizeof(int)*n);
+    
+    int* d_workToDo;
+    cudaMalloc((void**)&d_workToDo,sizeof(int));
+    
+    kernel_parent_bfs<<<1,1>>>(n,d_V,d_indices,d_edges,d_core,Fa,Xa,d_map,visited,d_workToDo);
+    cudaDeviceSynchronize();
+    clock_gettime(CLOCK_MONOTONIC, &end_gpu);
+	msecs_gpu = 1000.0 * (end_gpu.tv_sec - start_gpu.tv_sec) + (end_gpu.tv_nsec - start_gpu.tv_nsec)/1000000.0;
+    // unsigned int* map=(unsigned int*)malloc(sizeof(unsigned int)*n);
+    cudaMemcpy(map, d_map, sizeof(unsigned int)*n, cudaMemcpyDeviceToHost);
 
     cudaFree(d_edges);
     cudaFree(d_indices);
@@ -110,6 +191,10 @@ for(int i=0;i<numEdges;i++){
     cudaFree(d_x);
     cudaFree(d_y);
     cudaFree(d_core);
+    cudaFree(Xa);
+    cudaFree(Fa);
+    cudaFree(visited);
+
     free(core);
     free(edges);
     free(indices);
@@ -117,6 +202,6 @@ for(int i=0;i<numEdges;i++){
 
     
 
-    return 0;
+    return msecs_gpu;
 
 }
