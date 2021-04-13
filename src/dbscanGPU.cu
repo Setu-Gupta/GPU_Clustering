@@ -6,7 +6,7 @@
 #include <thrust/execution_policy.h>
 
 #include "GPUCluster.h"
-__global__ void  kernel_getV(float* x,float* y,int n,int* V,int* core,int minPts,float R){
+__global__ void  kernel_getV(float* x,float* y,unsigned int n,int* V,unsigned char* core,int minPts,float R){
    
     int tx=threadIdx.x+blockDim.x*blockIdx.x;
     // printf("%f\n",R);
@@ -29,7 +29,7 @@ __global__ void  kernel_getV(float* x,float* y,int n,int* V,int* core,int minPts
     }
 }
 
-__global__ void kernel_getEdges(float* x,float* y,int n,int* V,int* indices,int* edges,float R) {
+__global__ void kernel_getEdges(float* x,float* y,unsigned int n,int* V,int* indices,int* edges,float R) {
     int tx=threadIdx.x+blockDim.x*blockIdx.x;
     if(tx<n){
         int count =0;
@@ -37,6 +37,7 @@ __global__ void kernel_getEdges(float* x,float* y,int n,int* V,int* indices,int*
         float py=y[tx];
         for(int i=0;i<n;i++){
             float dist=sqrt(pow(px-x[i],2)+pow(py-y[i],2));
+            // printf("%f\n",dist);
             if(dist<=R && dist>0){
                 edges[indices[tx]+count]=i;
                 count++;
@@ -46,7 +47,7 @@ __global__ void kernel_getEdges(float* x,float* y,int n,int* V,int* indices,int*
     }
     
 }
-__global__ void kernel_init(int* Fa,int size){
+__global__ void kernel_init(unsigned char* Fa,int size){
     int tx=threadIdx.x+blockDim.x*blockIdx.x;
     if(tx<size){
         Fa[tx]=0;
@@ -54,7 +55,7 @@ __global__ void kernel_init(int* Fa,int size){
 }
 
 
-__global__ void kernel_bfs_child(int* V,int* indices,int* edges,int* Fa,int* Xa,int* workToDo,int n){
+__global__ void kernel_bfs_child(int* V,int* indices,int* edges,unsigned char* Fa,unsigned char* Xa,int* workToDo,unsigned int n){
     int tx=threadIdx.x+blockDim.x*blockIdx.x;
 
     if(tx<n){
@@ -74,7 +75,7 @@ __global__ void kernel_bfs_child(int* V,int* indices,int* edges,int* Fa,int* Xa,
         }
     }
 }
-__global__ void kernel_updateVisited(int* visited,int* Xa,unsigned int* map,int cluster,int n){
+__global__ void kernel_updateVisited(unsigned char* visited,unsigned char* Xa,unsigned int* map,int cluster,unsigned int n){
     int tx=threadIdx.x + blockDim.x*blockIdx.x;
     if(tx<n){
         map[tx]=255;
@@ -84,7 +85,7 @@ __global__ void kernel_updateVisited(int* visited,int* Xa,unsigned int* map,int 
         }
     }
 }
-__global__ void kernel_parent_bfs(int n,int* V,int* indices,int* edges,int* core,int*Fa,int* Xa, unsigned int* map,int* visited,int* workToDo){
+__global__ void kernel_parent_bfs(int n,int* V,int* indices,int* edges,unsigned char* core,unsigned char *Fa,unsigned char* Xa, unsigned int* map,unsigned char* visited,int* workToDo){
     
     kernel_init<<<max(1,n/1024),min(n,1024)>>>(visited,n);
     cudaDeviceSynchronize();
@@ -125,11 +126,11 @@ float dbscanGPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,
 	float msecs_gpu;
 	clock_gettime(CLOCK_MONOTONIC, &start_gpu);
     int* d_V;
-    int* d_core;
+    unsigned char* d_core;
     float* d_x;
     float* d_y;
     cudaMalloc((void**)&d_V, sizeof(int)*n);
-    cudaMalloc((void**)&d_core, sizeof(int)*n );
+    cudaMalloc((void**)&d_core, sizeof(unsigned char)*n );
     cudaMalloc((void**)&d_x, sizeof(float)*n);
     cudaMalloc((void**)&d_y, sizeof(float)*n);
     
@@ -140,12 +141,8 @@ float dbscanGPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,
     kernel_getV<<<max(1,n/1024),min(n,1024)>>>(d_x,d_y,n,d_V,d_core,minPts,R);
     cudaDeviceSynchronize();
     int* V= (int* )malloc(sizeof(int)*n);
-    int* core= (int* )malloc(sizeof(int)*n);
-
     cudaMemcpy(V, d_V, sizeof(int)*n, cudaMemcpyDeviceToHost);
-    cudaMemcpy(core, d_core, sizeof(int)*n, cudaMemcpyDeviceToHost);
     
-
     
     int* indices=(int* )malloc(sizeof(int)*n);
     thrust::exclusive_scan(thrust::host, V, V + n, indices, 0);
@@ -167,13 +164,13 @@ float dbscanGPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,
     
 
     unsigned int* d_map;
-    int* Fa;int* Xa;
+    unsigned char* Fa;unsigned char* Xa;
     cudaMalloc((void**)&d_map, sizeof(unsigned int)*n);
-    cudaMalloc((void**)&Fa, sizeof(int)*n);
-    cudaMalloc((void**)&Xa, sizeof(int)*n);
+    cudaMalloc((void**)&Fa, sizeof(unsigned char)*n);
+    cudaMalloc((void**)&Xa, sizeof(unsigned char)*n);
 
-    int* visited;
-    cudaMalloc((void**)&visited, sizeof(int)*n);
+    unsigned char* visited;
+    cudaMalloc((void**)&visited, sizeof(unsigned char)*n);
     
     int* d_workToDo;
     cudaMalloc((void**)&d_workToDo,sizeof(int));
@@ -195,7 +192,6 @@ float dbscanGPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,
     cudaFree(Fa);
     cudaFree(visited);
 
-    free(core);
     free(edges);
     free(indices);
     free(V);

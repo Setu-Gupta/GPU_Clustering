@@ -113,15 +113,15 @@ int main(int argc, char **argv)
 		int minPts =atoi(argv[3]);
 		char *endptr;
 		float R = strtof(argv[4], &endptr);
-		float msecs_cpu=dbscanCPU(x, y,map,n, minPts, R);
-		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
+		// float msecs_cpu=dbscanCPU(x, y,map,n, minPts, R);
+		// std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
 		
 
-		for(unsigned int i = 0; i < n; i++){
-			mapCPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
-			//std::cout<< x[i] << " " << y[i] << " " << map[i] << std::endl;
+		// for(unsigned int i = 0; i < n; i++){
+			// mapCPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
+			// std::cout<< x[i] << " " << y[i] << " " << map[i] << std::endl;
 			
-		}
+		// }
 
 		memset(map, 0, n * sizeof(unsigned int));
 
@@ -130,8 +130,8 @@ int main(int argc, char **argv)
 		for(unsigned int i = 0; i < n; i++)
 			mapGPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
 
-		float speedup = msecs_cpu / msecs_gpu;
-		std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
+		// float speedup = msecs_cpu / msecs_gpu;
+		// std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
 
 
 
