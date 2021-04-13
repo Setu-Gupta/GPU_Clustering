@@ -22,6 +22,14 @@ void print_usage()
 
 }
 
+float get_accuracy(unsigned int n, unsigned int *a, unsigned int *b)
+{
+	unsigned int diff = 0;
+	for(unsigned int i = 0; i < n; i++)
+		diff += (unsigned int)(a[i] == b[i]);
+	return 100*(float)diff/(float)n;
+}
+
 int main(int argc, char **argv)
 {
 	// Input parsing
@@ -83,28 +91,29 @@ int main(int argc, char **argv)
 		y[i] = input[i].second;
 	}
 
-	unsigned int *map = (unsigned int *)malloc(n * sizeof(unsigned int));
-	memset(map, 0, n * sizeof(unsigned int));
+	unsigned int *map_from_CPU = (unsigned int *)malloc(n * sizeof(unsigned int));
+	unsigned int *map_from_GPU = (unsigned int *)malloc(n * sizeof(unsigned int));
+	memset(map_from_CPU, 0, n * sizeof(unsigned int));
+	memset(map_from_GPU, 0, n * sizeof(unsigned int));
 
 	if(test_name == "kmeans")
 	{
 		unsigned int k = atoi(argv[3]);
 		unsigned int num_iters = atoi(argv[4]);
 
-		float msecs_cpu = kmeansCPU(x, y, map, n, k, num_iters);
+		float msecs_cpu = kmeansCPU(x, y, map_from_CPU, n, k, num_iters);
 		std::cout << "CPU took " << msecs_cpu << "ms" << std::endl;
 		for(unsigned int i = 0; i < n; i++)
-			mapCPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
-		
-		memset(map, 0, n * sizeof(unsigned int));
+			mapCPU << x[i] << " " << y[i] << " " << map_from_CPU[i] << std::endl;
 
-		float msecs_gpu = kmeansGPU(x, y, map, n, k, num_iters);
+		float msecs_gpu = kmeansGPU(x, y, map_from_GPU, n, k, num_iters);
 		std::cout << "GPU took " << msecs_gpu << "ms" << std::endl;
 		for(unsigned int i = 0; i < n; i++)
-			mapGPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
+			mapGPU << x[i] << " " << y[i] << " " << map_from_GPU[i] << std::endl;
 
 		float speedup = msecs_cpu / msecs_gpu;
 		std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
+		std::cout << "Accuracy: " << get_accuracy(n, map_from_CPU, map_from_GPU) << "%" << std::endl;
 
 	}
 	else if(test_name == "dbscan")
@@ -113,27 +122,26 @@ int main(int argc, char **argv)
 		int minPts =atoi(argv[3]);
 		char *endptr;
 		float R = strtof(argv[4], &endptr);
-		float msecs_cpu=dbscanCPU(x, y,map,n, minPts, R);
+		float msecs_cpu=dbscanCPU(x, y,map_from_CPU,n, minPts, R);
 		// float msecs_cpu=1;
 
 		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
 		
 
 		for(unsigned int i = 0; i < n; i++){
-			mapCPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
+			mapCPU << x[i] << " " << y[i] << " " << map_from_CPU[i] << std::endl;
 			// std::cout<< x[i] << " " << y[i] << " " << map[i] << std::endl;
 			
 		}
 
-		memset(map, 0, n * sizeof(unsigned int));
-
-		float msecs_gpu = dbscanGPU(x, y, map, n,minPts,R);
+		float msecs_gpu = dbscanGPU(x, y, map_from_GPU, n,minPts,R);
 		std::cout << "GPU took " << msecs_gpu << "ms" << std::endl;
 		for(unsigned int i = 0; i < n; i++)
-			mapGPU << x[i] << " " << y[i] << " " << map[i] << std::endl;
+			mapGPU << x[i] << " " << y[i] << " " << map_from_GPU[i] << std::endl;
 
 		float speedup = msecs_cpu / msecs_gpu;
 		std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
+		std::cout << "Accuracy: " << get_accuracy(n, map_from_CPU, map_from_GPU) << "%" << std::endl;
 
 
 
@@ -147,7 +155,8 @@ int main(int argc, char **argv)
 
 	free(x);
 	free(y);
-	free(map);
+	free(map_from_CPU);
+	free(map_from_GPU);
 	dataset.close();
 	mapCPU.close();
 	mapGPU.close();

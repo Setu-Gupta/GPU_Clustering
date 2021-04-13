@@ -58,7 +58,7 @@ float dbscanCPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,
 	clock_gettime(CLOCK_MONOTONIC, &start_cpu);
 
 
-	for(int i=0;i<n;i++)map[i]=255; // initialise all points. 255 means noise
+	for(int i=0;i<n;i++)map[i]=0; // initialise all points. 255 means noise
 	int *V = (int* ) malloc(sizeof(int)*n);
 
 // Calculating the number of neighbours of each point

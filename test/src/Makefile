@@ -2,7 +2,13 @@ SRC=$(wildcard ./*.cpp) $(wildcard ../../src/*.cpp) $(wildcard ./*.cu) $(wildcar
 
 CC=nvcc
 
-test: $(SRC)
-	$(CC) -g -G  -o test $(SRC)  -Wno-deprecated-declarations  -rdc=true -lcudadevrt
+default: opt
+
+debug: $(SRC)
+	$(CC)  -o test $(SRC)  -Wno-deprecated-declarations  -rdc=true -lcudadevrt -g -G
+
+opt: $(SRC)
+	$(CC)  -o test $(SRC)  -Wno-deprecated-declarations  -rdc=true -lcudadevrt -O3 -Xcompiler -O3
+
 clean:
-	rm test *.clusters
+	rm test *.cluster
