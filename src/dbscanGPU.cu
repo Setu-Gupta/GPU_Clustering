@@ -78,7 +78,7 @@ __global__ void kernel_bfs_child(int* V,int* indices,int* edges,unsigned char* F
 __global__ void kernel_updateVisited(unsigned char* visited,unsigned char* Xa,unsigned int* map,int cluster,unsigned int n){
     int tx=threadIdx.x + blockDim.x*blockIdx.x;
     if(tx<n){
-        map[tx]=255;
+        // map[tx]=255;
         if(Xa[tx]==1){
             visited[tx]=1;
             map[tx]=cluster;
