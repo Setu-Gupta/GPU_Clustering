@@ -122,8 +122,8 @@ int main(int argc, char **argv)
 		int minPts =atoi(argv[3]);
 		char *endptr;
 		float R = strtof(argv[4], &endptr);
-		float msecs_cpu=dbscanCPU(x, y,map_from_CPU,n, minPts, R);
-		// float msecs_cpu=1;
+		// float msecs_cpu=dbscanCPU(x, y,map_from_CPU,n, minPts, R);
+		float msecs_cpu=1;
 
 		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
 		
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 
 		float speedup = msecs_cpu / msecs_gpu;
 		std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
-		std::cout << "Accuracy: " << get_accuracy(n, map_from_CPU, map_from_GPU) << "%" << std::endl;
+		// std::cout << "Accuracy: " << get_accuracy(n, map_from_CPU, map_from_GPU) << "%" << std::endl;
 
 
 

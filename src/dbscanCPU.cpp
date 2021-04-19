@@ -97,7 +97,11 @@ float dbscanCPU(float* x, float* y,	unsigned int* map,unsigned int n,int minPts,
 		if(count>=minPts)core[i]=1;
 		else core[i]=0;
 	}
-	
+	// int count=0;
+	// for(int i =0;i<n;i++)count+=core[i];
+	// std::cout<<count<<std::endl;
+
+
 	int cluster=1;
 	char *visited = (char* ) malloc(sizeof(char)*n);
 	for(int i=0;i<n;i++){
