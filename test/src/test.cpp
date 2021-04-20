@@ -59,15 +59,28 @@ float get_accuracy(unsigned int n, unsigned int *a, unsigned int *b)
 			b_new[i] = cluster_mappings[b[i]];
 	}
 
+	// // Compare
+	// unsigned int diff = 0;
+	// for(unsigned int i = 0; i < n; i++)
+	// 	diff += (unsigned int)(a_new[i] == b_new[i]);
+
 	// Compare
-	unsigned int diff = 0;
+	unsigned int same = 0;
+	// std::cout << std::endl;
 	for(unsigned int i = 0; i < n; i++)
-		diff += (unsigned int)(a_new[i] == b_new[i]);
+	{
+		same += (unsigned int)(a_new[i] == b_new[i]);
+		if(a_new[i] != b_new[i])
+			std::cout << "At index = " << i << " CPU:" << a_new[i] << " GPU:" << b_new[i] << std::endl;
+	}
+	// std::cout << a_new[78] << " " << b_new[78] << std::endl;
+	// std::cout << a_new[98] << " " << b_new[98] << std::endl;
+	// std::cout << a_new[94] << " " << b_new[94] << std::endl;
 
 	free(a_new);
 	free(b_new);
 	
-	return 100*(float)diff/(float)n;
+	return 100*(float)same/(float)n;
 }
 
 int main(int argc, char **argv)
@@ -171,16 +184,15 @@ int main(int argc, char **argv)
 	}
 	else if(test_name == "dbscan")
 	{
-	
 		// Read arguments
 		int minPts = atoi(argv[3]);
 		char *endptr;
 		float R = strtof(argv[4], &endptr);
 
-		// float msecs_cpu = dbscanCPU(x, y, map_from_CPU,n, minPts, R);
-		// std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
-		// for(unsigned int i = 0; i < n; i++)
-		// 	mapCPU << x[i] << " " << y[i] << " " << map_from_CPU[i] << std::endl;
+		float msecs_cpu = dbscanCPU(x, y, map_from_CPU,n, minPts, R);
+		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
+		for(unsigned int i = 0; i < n; i++)
+			mapCPU << x[i] << " " << y[i] << " " << map_from_CPU[i] << std::endl;
 			
 
 		float msecs_gpu = dbscanGPU(x, y, map_from_GPU, n, minPts, R);
@@ -188,9 +200,9 @@ int main(int argc, char **argv)
 		for(unsigned int i = 0; i < n; i++)
 			mapGPU << x[i] << " " << y[i] << " " << map_from_GPU[i] << std::endl;
 
-		// float speedup = msecs_cpu / msecs_gpu;
-		// std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
-		// std::cout << "Accuracy: " << get_accuracy(n, map_from_CPU, map_from_GPU) << "%" << std::endl;
+		float speedup = msecs_cpu / msecs_gpu;
+		std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
+		std::cout << "Accuracy: " << get_accuracy(n, map_from_CPU, map_from_GPU) << "%" << std::endl;
 	}
 	else
 	{

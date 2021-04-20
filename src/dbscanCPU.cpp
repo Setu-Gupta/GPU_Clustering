@@ -1,4 +1,6 @@
 #include "GPUCluster.h"
+#include <assert.h>
+#include <queue>
 
 /*
 Returns the euclidean distance betwee (xi, yi) and (xj, yj)
@@ -25,16 +27,15 @@ Only visits vertices not in visited.
 */
 void bfs(int* V, int* edges, int* indices, char* visited, unsigned int* map, int v, unsigned int n, int cluster)
 {
-	int* queue = (int*) malloc(sizeof(int)*n);
-	queue[0] = v;
-	int top = 0;
-	int bottom = 1;
+	std::queue<int> queue;
+	queue.push(v);
+	visited[v] = 1;
 
-	while(top < bottom)
+	while(!queue.empty())
 	{
-		int t = queue[top];
+		int t = queue.front();
+		queue.pop();
 		map[t] = cluster;
-		top++;
 		for(int off = 0; off < V[t]; off++)
 		{
 			int nbour = edges[indices[t] + off];
@@ -42,12 +43,10 @@ void bfs(int* V, int* edges, int* indices, char* visited, unsigned int* map, int
 			{
 				visited[nbour] = 1;
 				map[nbour] = cluster;
-				queue[bottom] = nbour;
-				bottom++;
+				queue.push(nbour);
 			}
 		}
 	}
-	free(queue);
 }
 
 /*
@@ -112,11 +111,14 @@ float dbscanCPU(float* x, float* y,	unsigned int* map, unsigned int n, int minPt
 		}
 		core[i] = (int)(count >= minPts);		// A point is core of it has more edges than minPts
 	}
-std::cout << numEdges << std::endl;
-	int cluster=1;
+	// std::cout << numEdges << std::endl;
+	int cluster = 1;
 	char *visited = (char* ) malloc(n * sizeof(char));
 	memset(visited, 0, n * sizeof(char));
 
+
+	// for(int i = 0; i<n; i++)
+	// 	map[i] = i+n < numEdges ? edges[i+n] : 0;
 	for(int v = 0; v < n; v++)
 	{
 		if(visited[v] == 0 && core[v] == 1)	//	bfs from all unvisited core points
@@ -125,6 +127,20 @@ std::cout << numEdges << std::endl;
 			cluster++;
 		}
 	}
+
+	// for(int i = 0; i < n; i++)
+	// {
+	// 	for(int j = 0; j < V[i]; j++)
+	// 		std::cout << i << "->" << edges[indices[i] + j] << std::endl;
+	// }
+	// std::cout << std::endl;
+
+	// for(int i = 0; i < n; i++)
+	// 	std::cout << indices[i] << " ";
+	// std::cout << std::endl;
+	// for(int i = 0; i < numEdges; i++)
+	// 	std::cout << edges[i] << " ";
+	// std::cout << std::endl;
 	
 	clock_gettime(CLOCK_MONOTONIC, &end_cpu);
 	msecs_cpu = 1000.0 * (end_cpu.tv_sec - start_cpu.tv_sec) + (end_cpu.tv_nsec - start_cpu.tv_nsec)/1000000.0;
