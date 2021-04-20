@@ -5,8 +5,7 @@
 #include <float.h>
 #include <ctime>
 #include <string.h>
-#include <iostream>
-#include <stdio.h>
+#include <cmath>
 
 /*
 Performs kmeans clustering on CPU

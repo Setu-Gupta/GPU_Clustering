@@ -156,10 +156,10 @@ int main(int argc, char **argv)
 	memset(map_from_CPU, 0, n * sizeof(unsigned int));
 	memset(map_from_GPU, 0, n * sizeof(unsigned int));
 
-	unsigned int *new_x_from_CPU = (unsigned int *)malloc(n * sizeof(unsigned int));
-	unsigned int *new_y_from_CPU = (unsigned int *)malloc(n * sizeof(unsigned int));
-	memset(new_x_from_CPU, 0, n * sizeof(unsigned int));
-	memset(new_y_from_CPU, 0, n * sizeof(unsigned int));
+	float *new_x_from_CPU = (float *)malloc(n * sizeof(float));
+	float *new_y_from_CPU = (float *)malloc(n * sizeof(float));
+	memset(new_x_from_CPU, 0, n * sizeof(float));
+	memset(new_y_from_CPU, 0, n * sizeof(float));
 
 	if(test_name == "kmeans")
 	{
@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 		float R = strtof(argv[4], &endptr);
 
 		float msecs_cpu = dbscanCPU(x, y, map_from_CPU,n, minPts, R);
-		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
+		std::cout << "CPU Time " << msecs_cpu << "ms" << std::endl;
 		for(unsigned int i = 0; i < n; i++)
 			mapCPU << x[i] << " " << y[i] << " " << map_from_CPU[i] << std::endl;
 			
@@ -211,26 +211,24 @@ int main(int argc, char **argv)
 		std::string clustering_algo(argv[4]);
 
 		float msecs_cpu = nipalsCPU(x, y, new_x_from_CPU, new_y_from_CPU, n, num_iters);
-		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
+		std::cout<<"CPU Time "<< msecs_cpu << "ms" << std::endl;
 
-		// if(clustering_algo == "dbscan")
-		// {
-		// 	int minPts = atoi(argv[5]);
-		// 	char *endptr;
-		// 	float R = strtof(argv[6], &endptr);
-		// 	dbscanGPU(x, y, map_from_GPU, n, minPts, R);
-		// }
-		// else
-		// {
-		// 	unsigned int k = atoi(argv[3]);
-		// 	unsigned int num_iters = atoi(argv[4]);	
-		// 	kmeansGPU(x, y, map_from_GPU, n, k, num_iters);
-		// }
-		// for(unsigned int i = 0; i < n; i++)
-		// 	mapGPU << x[i] << " " << y[i] << " " << map_from_GPU[i] << std::endl;
+		if(clustering_algo == "dbscan")
+		{
+			int minPts = atoi(argv[5]);
+			char *endptr;
+			float R = strtof(argv[6], &endptr);
+			dbscanGPU(new_x_from_CPU, new_y_from_CPU, map_from_GPU, n, minPts, R);
+		}
+		else
+		{
+			unsigned int k = atoi(argv[5]);
+			unsigned int num_iters = atoi(argv[6]);	
+			kmeansGPU(new_x_from_CPU, new_y_from_CPU, map_from_GPU, n, k, num_iters);
+		}
 
 		for(unsigned int i = 0; i < n; i++)
-			mapGPU << x[i] << " " << y[i] << " 0" << std::endl;
+			mapCPU << new_x_from_CPU[i] << " " << new_y_from_CPU[i] << " " << map_from_GPU[i] << std::endl;
 	}
 
 	cudaFreeHost(x);

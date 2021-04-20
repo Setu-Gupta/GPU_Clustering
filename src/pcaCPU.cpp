@@ -1,10 +1,8 @@
 #include "GPUCluster.h"
-#include<iostream>
-#include<stdio.h>
-#include<cmath>
 
 #define DIMENSION 2	// dimentions of input and output data
 #define MAX_CHANGE 1e-5	// Change should be more than this to have more iterations
+#define ALPHA 1
 
 // NOTE: All matrices are stores in row major format
 
@@ -51,6 +49,7 @@ float norm(float* Pk, int k)
 	float acc = 0;
 	for(int i = 0; i < k; i++)
 		acc += Pk[i] * Pk[i];
+
 	return std::sqrt(acc); 
 }
 
@@ -61,7 +60,6 @@ Then divides Pk by its norm, making it a unit vector.
 void normalize(float* Pk, int k)
 {
 	float l2 = norm(Pk, k);
-
 	for(int i = 0; i < k; i++)
 		Pk[i] /= l2;
 }
@@ -69,7 +67,7 @@ void normalize(float* Pk, int k)
 /*
 Computes dest = alpha(A-B). Dimensions of all A, B and dest is RAxCA
 */
-void subtract(float* A, float*B, int RA, int CA, float*dest, float alpha)
+void subtract(float* A, float* B, int RA, int CA, float* dest, float alpha)
 {
 	for(int i = 0; i < RA; i++)
 		for(int j = 0; j < CA; j++)
@@ -95,29 +93,29 @@ void nipals(float* R, float* T, float* P, int J, int N, int K, float e)
 	{
 		float lamda = 0;
 		moveColToVec(R, Tk, N, K, k);
-
 		for(int j = 0; j < J; j++)
 		{
 			transpose(R, Rt, N, K);
 			matrix_multiply(Rt, Tk, K, N, 1, Pk);
-			normalize(Pk, k);
+			normalize(Pk, K);
 			matrix_multiply(R, Pk, N, K, 1, Tk);
-			float lamda_dash = norm(Tk, k);
+			float lamda_dash = norm(Tk, K);
 			if(std::abs(lamda_dash - lamda) <= e)
 				break;
 			lamda = lamda_dash;
 		}
 
 		for(int i = 0; i < K; i++)
-			P[i*K+k] = Pk[i];
+			P[i*K + k] = Pk[i];
 		
 		for(int i = 0; i < N; i++)
-			T[i*K + k]=Tk[i];
-			
+			T[i*K + k] = Tk[i];
+		
 		float Pkt[1 * K] = {0};
 		transpose(Pk, Pkt, K, 1);
+
 		matrix_multiply(Tk, Pkt, N, 1, K, Tpkt);
-		subtract(R, Tpkt, N, K, R, 1e-3);
+		subtract(R, Tpkt, N, K, R, ALPHA);
 	}
 }
 
@@ -167,6 +165,11 @@ Returns: Time spent in computation in milliseconds
 */
 float nipalsCPU(float* x, float* y,	float* new_x, float* new_y, unsigned int n, unsigned int num_iters)
 {
+
+	struct timespec start_cpu, end_cpu;
+	float msecs_cpu;
+	clock_gettime(CLOCK_MONOTONIC, &start_cpu);
+
 	int N = n;
 	int DIM = DIMENSION;
 	int K = DIM;
@@ -184,22 +187,16 @@ float nipalsCPU(float* x, float* y,	float* new_x, float* new_y, unsigned int n, 
 		X[i*K + 1] = y[i];
 	}
 
-	for(int i = 0; i < N; i++)
-	{
-		for(int j = 0; j < DIM; j++)
-			X[i*DIM + j] = (float)(i*DIM + j);	// From outside
-	}
-
 	StandardScaler(X, R, N, DIM);
 
 	nipals(R, T, P, J, N, K, e);
 	for(int i = 0; i < N; i++)
 	{
-		new_x = T[i*K + 0];
-		new_y = X[i*K + 1];
+		new_x[i] = T[i*K + 0];
+		new_y[i] = T[i*K + 1];
 	}
-	// std::cout << "[" << std::endl;
-	// for(int i = 0; i < N; i++)
-	// 	std::cout << "["<<T[i*K + 0] << ", " << T[i*K + 1] << "]," << std::endl;
-	// std::cout << "]" << std::endl;
+
+	clock_gettime(CLOCK_MONOTONIC, &end_cpu);
+	msecs_cpu = 1000.0 * (end_cpu.tv_sec - start_cpu.tv_sec) + (end_cpu.tv_nsec - start_cpu.tv_nsec)/1000000.0;
+	return msecs_cpu;
 }
