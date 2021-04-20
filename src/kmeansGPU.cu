@@ -3,9 +3,12 @@
 #define THREADS_PER_BLOCK	1024
 
 // Store the x and y coordiates of datapoints in texture memory
-texture<float, 1, cudaReadModeElementType> x_tex;
-texture<float, 1, cudaReadModeElementType> y_tex;
+static texture<float, 1, cudaReadModeElementType> x_tex;
+static texture<float, 1, cudaReadModeElementType> y_tex;
 
+/*
+Initializes cluster_data_sum_x, cluster_data_sum_y and cluster_data_count of size k to 0.
+*/
 __global__
 void initDataToZero(unsigned int k, float *cluster_data_sum_x, float *cluster_data_sum_y, float *cluster_data_count)
 {
@@ -18,6 +21,18 @@ void initDataToZero(unsigned int k, float *cluster_data_sum_x, float *cluster_da
 	}
 }
 
+/*
+Assigns new clusters to points and computes the sum and count of each point in every cluster
+Args:
+	map:	Mapping between points and cluster IDs. map[i] is the cluster for ith value.
+	n:		Number of samples
+	k:		Number of clusters
+	clusters_x:	x coordinates of every cluster
+	clusters_y:	x coordinates of every cluster
+	cluster_data_sum_x:	Sum of x coordinates of each point in every cluster
+	cluster_data_sum_y:	Sum of y coordinates of each point in every cluster
+	cluster_data_count:	Count of points in every cluster
+*/
 __global__
 void assignCluster(unsigned int *map, unsigned int n, unsigned int k,
 	float *clusters_x, float *clusters_y,
@@ -76,6 +91,16 @@ void assignCluster(unsigned int *map, unsigned int n, unsigned int k,
 	}
 }
 
+/*
+Computes next set of centroids
+Args:
+	k:		Number of clusters
+	clusters_x:	x coordinates of every cluster
+	clusters_y:	x coordinates of every cluster
+	cluster_data_sum_x:	Sum of x coordinates of each point in every cluster
+	cluster_data_sum_y:	Sum of y coordinates of each point in every cluster
+	cluster_data_count:	Count of points in every cluster
+*/
 __global__
 void computeNewClusters(float *clusters_x, float *clusters_y,
 	unsigned int k, float *cluster_data_sum_x, float *cluster_data_sum_y, float *cluster_data_count)

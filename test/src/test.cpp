@@ -6,6 +6,8 @@
 #include <string>
 #include <cstdlib>
 #include <cstring>
+#include <map>
+#include <cuda_runtime.h>
 
 /*
 I/O format:
@@ -18,15 +20,53 @@ void print_usage()
 {
 	std::cout << "Usage: test <path to dataset> <kmeans | dbscan | pca> [options]" << std::endl;
 	std::cout << "Options for kmeans: <k> <number of iterations>" << std::endl;
-	std::cout << "Options for dbscan: <minPts> <R>" <<std::endl;
-
+	std::cout << "Options for dbscan: <minPts> <R>" << std::endl;
+	std::cout << "Options for dbscan: <number of iterations> <dbscan|kmeans i.e. the clustering algoro=ithm to be used post PCA> [kmeans or dbscan options]" << std::endl;
 }
 
 float get_accuracy(unsigned int n, unsigned int *a, unsigned int *b)
 {
+	// Assign each mapping to same cluster IDs
+	unsigned int *a_new, *b_new;
+	a_new = (unsigned int *)malloc(n * sizeof(unsigned int));
+	b_new = (unsigned int *)malloc(n * sizeof(unsigned int));
+
+	std::map<unsigned int, unsigned int> cluster_mappings;
+	unsigned int cluster_id = 0;
+	for(unsigned int i = 0; i < n; i++)
+	{
+		if(cluster_mappings.find(a[i]) == cluster_mappings.end())
+		{
+			cluster_mappings[a[i]] = cluster_id;
+			a_new[i] = cluster_id;
+			cluster_id++;
+		}
+		else
+			a_new[i] = cluster_mappings[a[i]];
+	}
+
+	cluster_mappings.clear();
+	cluster_id = 0;
+	for(unsigned int i = 0; i < n; i++)
+	{
+		if(cluster_mappings.find(b[i]) == cluster_mappings.end())
+		{
+			cluster_mappings[b[i]] = cluster_id;
+			b_new[i] = cluster_id;
+			cluster_id++;
+		}
+		else
+			b_new[i] = cluster_mappings[b[i]];
+	}
+
+	// Compare
 	unsigned int diff = 0;
 	for(unsigned int i = 0; i < n; i++)
-		diff += (unsigned int)(a[i] == b[i]);
+		diff += (unsigned int)(a_new[i] == b_new[i]);
+
+	free(a_new);
+	free(b_new);
+	
 	return 100*(float)diff/(float)n;
 }
 
@@ -38,7 +78,6 @@ int main(int argc, char **argv)
 		print_usage();
 		return -1;
 	}
-
 
 	std::string dataset_path(argv[1]);
 	std::string test_name(argv[2]);
@@ -57,6 +96,12 @@ int main(int argc, char **argv)
 	}
 
 	if(test_name == "dbscan" && argc < 5)
+	{
+		print_usage();
+		return -1;
+	}
+
+	if(test_name == "pca" && argc < 7)
 	{
 		print_usage();
 		return -1;
@@ -83,8 +128,9 @@ int main(int argc, char **argv)
 	}
 
 	unsigned int n = input.size();
-	float *x = (float *)malloc(n * sizeof(float));
-	float *y = (float *)malloc(n * sizeof(float));
+	float *x, *y;
+	cudaHostAlloc((void **) &x, n * sizeof(float), cudaHostAllocDefault);
+	cudaHostAlloc((void **) &y, n * sizeof(float), cudaHostAllocDefault);
 	for(unsigned int i = 0; i < n; i++)
 	{
 		x[i] = input[i].first;
@@ -92,12 +138,19 @@ int main(int argc, char **argv)
 	}
 
 	unsigned int *map_from_CPU = (unsigned int *)malloc(n * sizeof(unsigned int));
-	unsigned int *map_from_GPU = (unsigned int *)malloc(n * sizeof(unsigned int));
+	unsigned int *map_from_GPU;
+	cudaHostAlloc((void **) &map_from_GPU, n * sizeof(unsigned int), cudaHostAllocDefault);
 	memset(map_from_CPU, 0, n * sizeof(unsigned int));
 	memset(map_from_GPU, 0, n * sizeof(unsigned int));
 
+	unsigned int *new_x_from_CPU = (unsigned int *)malloc(n * sizeof(unsigned int));
+	unsigned int *new_y_from_CPU = (unsigned int *)malloc(n * sizeof(unsigned int));
+	memset(new_x_from_CPU, 0, n * sizeof(unsigned int));
+	memset(new_y_from_CPU, 0, n * sizeof(unsigned int));
+
 	if(test_name == "kmeans")
 	{
+		// Read arguments
 		unsigned int k = atoi(argv[3]);
 		unsigned int num_iters = atoi(argv[4]);
 
@@ -119,44 +172,59 @@ int main(int argc, char **argv)
 	else if(test_name == "dbscan")
 	{
 	
-		int minPts =atoi(argv[3]);
+		// Read arguments
+		int minPts = atoi(argv[3]);
 		char *endptr;
 		float R = strtof(argv[4], &endptr);
-		// float msecs_cpu=dbscanCPU(x, y,map_from_CPU,n, minPts, R);
-		float msecs_cpu=1;
 
-		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
-		
-
-		for(unsigned int i = 0; i < n; i++){
-			mapCPU << x[i] << " " << y[i] << " " << map_from_CPU[i] << std::endl;
-			// std::cout<< x[i] << " " << y[i] << " " << map[i] << std::endl;
+		// float msecs_cpu = dbscanCPU(x, y, map_from_CPU,n, minPts, R);
+		// std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
+		// for(unsigned int i = 0; i < n; i++)
+		// 	mapCPU << x[i] << " " << y[i] << " " << map_from_CPU[i] << std::endl;
 			
-		}
 
-		float msecs_gpu = dbscanGPU(x, y, map_from_GPU, n,minPts,R);
+		float msecs_gpu = dbscanGPU(x, y, map_from_GPU, n, minPts, R);
 		std::cout << "GPU took " << msecs_gpu << "ms" << std::endl;
 		for(unsigned int i = 0; i < n; i++)
 			mapGPU << x[i] << " " << y[i] << " " << map_from_GPU[i] << std::endl;
 
-		float speedup = msecs_cpu / msecs_gpu;
-		std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
+		// float speedup = msecs_cpu / msecs_gpu;
+		// std::cout << "Speedup Obtained: " << speedup << "x" << std::endl;
 		// std::cout << "Accuracy: " << get_accuracy(n, map_from_CPU, map_from_GPU) << "%" << std::endl;
-
-
-
-
-
 	}
 	else
 	{
 		std::cout << "TODO" << std::endl;
+		// Read arguments
+		// int num_iters = atoi(argv[3]);
+		// std::string clustering_algo(argv[4]);
+
+		// float msecs_cpu = nipalsCPU(x, y, new_x_from_CPU, new_y_from_CPU, n, num_iters);
+		// std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
+
+		// if(clustering_algo == "dbscan")
+		// {
+		// 	int minPts = atoi(argv[5]);
+		// 	char *endptr;
+		// 	float R = strtof(argv[6], &endptr);
+		// 	dbscanGPU(x, y, map_from_GPU, n, minPts, R);
+		// }
+		// else
+		// {
+		// 	unsigned int k = atoi(argv[3]);
+		// 	unsigned int num_iters = atoi(argv[4]);	
+		// 	kmeansGPU(x, y, map_from_GPU, n, k, num_iters);
+		// }
+		// for(unsigned int i = 0; i < n; i++)
+		// 	mapGPU << x[i] << " " << y[i] << " " << map_from_GPU[i] << std::endl;
 	}
 
-	free(x);
-	free(y);
+	cudaFreeHost(x);
+	cudaFreeHost(y);
 	free(map_from_CPU);
-	free(map_from_GPU);
+	cudaFreeHost(map_from_GPU);
+	free(new_x_from_CPU);
+	free(new_y_from_CPU);
 	dataset.close();
 	mapCPU.close();
 	mapGPU.close();
