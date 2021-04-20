@@ -116,9 +116,6 @@ float dbscanCPU(float* x, float* y,	unsigned int* map, unsigned int n, int minPt
 	char *visited = (char* ) malloc(n * sizeof(char));
 	memset(visited, 0, n * sizeof(char));
 
-
-	// for(int i = 0; i<n; i++)
-	// 	map[i] = i+n < numEdges ? edges[i+n] : 0;
 	for(int v = 0; v < n; v++)
 	{
 		if(visited[v] == 0 && core[v] == 1)	//	bfs from all unvisited core points
@@ -128,20 +125,6 @@ float dbscanCPU(float* x, float* y,	unsigned int* map, unsigned int n, int minPt
 		}
 	}
 
-	// for(int i = 0; i < n; i++)
-	// {
-	// 	for(int j = 0; j < V[i]; j++)
-	// 		std::cout << i << "->" << edges[indices[i] + j] << std::endl;
-	// }
-	// std::cout << std::endl;
-
-	// for(int i = 0; i < n; i++)
-	// 	std::cout << indices[i] << " ";
-	// std::cout << std::endl;
-	// for(int i = 0; i < numEdges; i++)
-	// 	std::cout << edges[i] << " ";
-	// std::cout << std::endl;
-	
 	clock_gettime(CLOCK_MONOTONIC, &end_cpu);
 	msecs_cpu = 1000.0 * (end_cpu.tv_sec - start_cpu.tv_sec) + (end_cpu.tv_nsec - start_cpu.tv_nsec)/1000000.0;
 	

@@ -11,4 +11,4 @@ opt: $(SRC)
 	$(CC)  -o test $(SRC)  -Wno-deprecated-declarations  -rdc=true -lcudadevrt -O3 -Xcompiler -O3
 
 clean:
-	rm test *.cluster
+	rm test *.clusters

@@ -206,13 +206,12 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		std::cout << "TODO" << std::endl;
 		// Read arguments
-		// int num_iters = atoi(argv[3]);
-		// std::string clustering_algo(argv[4]);
+		int num_iters = atoi(argv[3]);
+		std::string clustering_algo(argv[4]);
 
-		// float msecs_cpu = nipalsCPU(x, y, new_x_from_CPU, new_y_from_CPU, n, num_iters);
-		// std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
+		float msecs_cpu = nipalsCPU(x, y, new_x_from_CPU, new_y_from_CPU, n, num_iters);
+		std::cout<<"CPU Time "<<msecs_cpu<<"ms"<<std::endl;
 
 		// if(clustering_algo == "dbscan")
 		// {
@@ -229,6 +228,9 @@ int main(int argc, char **argv)
 		// }
 		// for(unsigned int i = 0; i < n; i++)
 		// 	mapGPU << x[i] << " " << y[i] << " " << map_from_GPU[i] << std::endl;
+
+		for(unsigned int i = 0; i < n; i++)
+			mapGPU << x[i] << " " << y[i] << " 0" << std::endl;
 	}
 
 	cudaFreeHost(x);

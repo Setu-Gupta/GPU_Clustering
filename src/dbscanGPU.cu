@@ -102,10 +102,6 @@ void kernel_getEdges(unsigned int n, int* indices, int* edges, float R)
 		}
 		__syncthreads();
 	}
-	// if(tx == 0)
-	// {
-	// 	printf("on gpu %d\n", edges[16]);
-	// }
 }
 
 __global__
@@ -238,23 +234,12 @@ void kernel_parent_bfs(	int n, int* V, int* indices, int* edges,
 			cudaDeviceSynchronize();
 			Fa[v] = 1;
 
-			// printf("Starting from %d\n", v);
-			// printf("Fa:");
-			// print_bool_arr(Fa, n);
-			// printf("Xa:");
-			// print_bool_arr(Xa, n);
-			// printf("\n");
 			*workToDo = 1;
 			while(*workToDo)
 			{
 				*workToDo = 0;
 				kernel_bfs_child<<<n_grid_dim,THREADS_PER_BLOCK>>>(V, indices, edges, Fa, Xa, workToDo,n);
 				cudaDeviceSynchronize();
-				// printf("Fa:");
-				// print_bool_arr(Fa, n);
-				// printf("Xa:");
-				// print_bool_arr(Xa, n);
-				// printf("\n");
 			}
 
 			kernel_updateVisited<<<n_grid_dim,THREADS_PER_BLOCK>>>(visited, Xa, map, cluster, n);
@@ -328,16 +313,6 @@ float dbscanGPU(float* x, float* y, unsigned int* map, unsigned int n, int minPt
 	int* d_workToDo;
 	cudaMalloc((void**)&d_workToDo, sizeof(int));
 	
-
-	// int *temp = (int *)malloc(numEdges * sizeof(int));
-	// cudaMemcpy(temp, d_edges, numEdges*sizeof(int), cudaMemcpyDeviceToHost);
-	// for(int i = 0; i < n; i++)
-	// 	map[i] = i+n < numEdges ? temp[i+n] : 0;
-	// free(temp);
-	// print_arr<<<1,1>>>(d_indices, n);
-	// print_arr<<<1,1>>>(d_edges, numEdges);
-	// print_graph<<<1,1>>>(d_V, d_edges, d_indices, n);
-
 	kernel_parent_bfs<<<1,1>>>(	n, d_V, d_indices, d_edges,
 								d_core, Fa, Xa,
 								d_map, visited, d_workToDo);

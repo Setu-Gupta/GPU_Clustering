@@ -1,2 +1,7 @@
 Dataset sources:
 http://cs.joensuu.fi/sipu/datasets/
+
+Folders:
+src: Library source
+test: test cases
+pca_python: python implementation of NIPALs PCA and comparision with sklearn
